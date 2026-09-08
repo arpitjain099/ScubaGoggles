@@ -222,7 +222,7 @@ class DlpRulesParser:
     def _check_arguments(cls,
                          detector: str,
                          likelihood: Likelihood,
-                         match_counts: dict) -> tuple:
+                         match_counts: dict = None) -> tuple:
 
         """Returns a tuple which includes whether the arguments for the DLP
         condition match the expected values, and the detector name if the
@@ -237,11 +237,22 @@ class DlpRulesParser:
         # The arguments are correct if the likelihood is at least "likely"
         # or "greater" (e.g., "very likely"), and the minimum match counts
         # are 1.
+        #
+        # The match counts are optional in the condition.  Google omits them
+        # for rules whose action has nowhere to set one, such as applying a
+        # label, and it omits either count individually.  A term that sets no
+        # threshold triggers on a single match, which is what the baseline
+        # asks for, so an absent count satisfies the requirement rather than
+        # failing it.  Reading them positionally used to raise a TypeError
+        # that ended the whole scan.
+
+        match_counts = match_counts or {}
 
         arguments_ok = (detector in cls._minimum_detectors
                         and likelihood >= Likelihood.LIKELY
-                        and match_counts['minimum_match_count'] == 1
-                        and match_counts['minimum_unique_match_count'] == 1)
+                        and match_counts.get('minimum_match_count', 1) == 1
+                        and match_counts.get('minimum_unique_match_count',
+                                             1) == 1)
 
         return arguments_ok, detector
 
